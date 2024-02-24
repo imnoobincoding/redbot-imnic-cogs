@@ -1,35 +1,41 @@
-# wikijs_cog/__init__.py
-
-from redbot.core import commands
+from redbot.core import commands, Config, tasks
+import discord
 
 class WikiJSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=52545658902) 
+        default_guild = {"channel_id": None}
+        self.config.register_guild(**default_guild)
 
     @commands.group()
     async def wikijs(self, ctx):
         """WikiJS-Befehle."""
         pass
 
-    @wikijs.group()
-    async def api(self, ctx):
-        """API-Befehle."""
-        pass
-
-    @api.command(name="add")
-    async def api_add(self, ctx, api_key: str):
-        """Fügt einen API-Schlüssel hinzu."""
-        # Speichere den API-Schlüssel in einer Datenbank oder einem anderen Speicherort
-        await ctx.send(f"API-Schlüssel {api_key} wurde hinzugefügt.")
-
-    # Ähnlich kannst du die anderen Befehle implementieren (api_remove, web_add, web_remove).
+    @wikijs.command(name="setchannel")
+    async def set_channel(self, ctx, channel: discord.TextChannel):
+        """Setzt den Discord-Channel für Benachrichtigungen."""
+        await self.config.guild(ctx.guild).channel_id.set(channel.id)
+        await ctx.send(f"Benachrichtigungs-Channel auf {channel.mention} gesetzt.")
 
     @commands.Cog.listener()
-    async def on_wikijs_change(self, change_info):
-        """Wird aufgerufen, wenn ein WikiJS-Change stattfindet."""
-        # Hier kannst du ein Embed erstellen und den Link zur geänderten Seite senden.
-        # change_info enthält Informationen über den Change (Kommentar, Link, etc.)
-        pass
+    async def on_ready(self):
+        """Wird aufgerufen, wenn der Bot bereit ist."""
+        await self.check_wikijs_changes.start()
+
+    @tasks.loop(minutes=5)  # Überprüfe alle 5 Minuten
+    async def check_wikijs_changes(self):
+        api_key = await self.config.user(self.bot.user).api_key()
+        wiki_url = await self.config.user(self.bot.user).wiki_url()
+        channel_id = await self.config.guild(self.bot.guilds[0]).channel_id()
+        channel = self.bot.get_channel(channel_id)
+        if channel:
+            embed = discord.Embed(title="WikiJS-Änderung", description=f"Die Seite {page_name} wurde geändert.")
+            embed.add_field(name="Link", value=f"{wiki_url}/{page_name}")
+            await channel.send(embed=embed)
+        else:
+            print(f"Channel mit ID {channel_id} nicht gefunden.")
 
 def setup(bot):
     bot.add_cog(WikiJSCog(bot))

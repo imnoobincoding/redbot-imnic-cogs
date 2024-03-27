@@ -5,6 +5,7 @@ from redbot.core import commands, Config
 from discord.ext import tasks
 from datetime import datetime
 
+
 class WikiJSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -71,12 +72,11 @@ class WikiJSCog(commands.Cog):
                     # Beispiel: Extrahiere die neuesten Änderungen und erstelle ein Embed
                     changes = data.get("changes", [])
                     if changes:
-                        embed = discord.Embed(title="WikiJS-Updates", description="Hier sind die neuesten Änderungen:")
+                        embed = discord.Embed(
+                            title="WikiJS-Updates", description="Hier sind die neuesten Änderungen:")
                         for change in changes:
                             title = change.get("title", "Unbekannter Artikel")
-                            url = f"{wiki_url}/page/{title}"
-                            embed.add_field(name=title, value=f"Link zum Artikel", inline=False)
-                        await channel.send(embed=embed)
+                            await channel.send(embed=embed)
             except Exception as e:
                 print(f"Fehler bei der API-Anfrage: {e}")
 

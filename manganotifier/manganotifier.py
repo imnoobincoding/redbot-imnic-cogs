@@ -141,12 +141,12 @@ class MangaNotifier(commands.Cog):
             print("Notification channel not set.")
 
     @commands.group()
-    async def manga(self, ctx):
+    async def manganotifier(self, ctx):
         """Manage your manga list"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @manga.command(name="add")
+    @manganotifier.command(name="add")
     async def add(self, ctx, *, name: str):
         """Add a manga to the list and fetch its details"""
         manga_list = await self.config.manga_list()
@@ -173,7 +173,7 @@ class MangaNotifier(commands.Cog):
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
 
-    @manga.command(name="remove")
+    @manganotifier.command(name="remove")
     async def remove(self, ctx, *, name: str):
         """Remove a manga from the list"""
         manga_list = await self.config.manga_list()
@@ -188,7 +188,7 @@ class MangaNotifier(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @manga.command(name="list")
+    @manganotifier.command(name="list")
     async def list(self, ctx):
         """List all mangas"""
         manga_list = await self.config.manga_list()
@@ -202,7 +202,7 @@ class MangaNotifier(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @manga.command(name="setchannel")
+    @manganotifier.command(name="setchannel")
     async def setchannel(self, ctx, channel: discord.TextChannel):
         """Set the notification channel"""
         await self.config.channel_id.set(channel.id)
@@ -213,7 +213,7 @@ class MangaNotifier(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @manga.command(name="info")
+    @manganotifier.command(name="info")
     async def info(self, ctx, *, name: str):
         """Get information about a manga"""
         async with aiohttp.ClientSession() as session:

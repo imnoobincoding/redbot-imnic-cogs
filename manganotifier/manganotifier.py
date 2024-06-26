@@ -8,7 +8,7 @@ import aiohttp
 class MangaNotifier(commands.Cog):
     """Manga Notifier to get updates on new episodes"""
 
-    def __init__(self, bot: Red):
+    def __init__(self, bot):
         super().__init__()
         self.bot = bot
         self.config = Config.get_conf(

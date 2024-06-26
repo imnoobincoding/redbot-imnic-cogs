@@ -144,7 +144,12 @@ class MangaNotifier(commands.Cog):
                 manga_list.append(
                     {'name': name, 'last_episode': manga_update['latest_episode']})
                 await self.config.manga_list.set(manga_list)
-                await ctx.send(f"Added {name} to the list with latest episode {manga_update['latest_episode']}.")
+                embed = discord.Embed(
+                    title="Manga Added",
+                    description=f"Added {name} to the list with the latest episode {manga_update['latest_episode']}.",
+                    color=discord.Color.green()
+                )
+                await ctx.send(embed=embed)
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
 
@@ -155,7 +160,12 @@ class MangaNotifier(commands.Cog):
         manga_list = [m for m in manga_list if m['name'].lower()
                       != name.lower()]
         await self.config.manga_list.set(manga_list)
-        await ctx.send(f"Removed {name} from the list.")
+        embed = discord.Embed(
+            title="Manga Removed",
+            description=f"Removed {name} from the list.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
 
     @manga.command(name="list")
     async def list(self, ctx):
@@ -164,13 +174,23 @@ class MangaNotifier(commands.Cog):
         if not manga_list:
             await ctx.send("The manga list is empty.")
             return
-        await ctx.send("\n".join(m['name'] for m in manga_list))
+        embed = discord.Embed(
+            title="Manga List",
+            description="\n".join(m['name'] for m in manga_list),
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
 
     @manga.command(name="setchannel")
     async def setchannel(self, ctx, channel: discord.TextChannel):
         """Set the notification channel"""
         await self.config.channel_id.set(channel.id)
-        await ctx.send(f"Notification channel set to {channel.mention}")
+        embed = discord.Embed(
+            title="Notification Channel Set",
+            description=f"Notification channel set to {channel.mention}",
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
 
     @manga.command(name="info")
     async def info(self, ctx, *, name: str):

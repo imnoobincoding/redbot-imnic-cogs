@@ -200,7 +200,7 @@ class MangaNotifier(commands.Cog):
             manga_update = await self.check_mangadex(session, name)
             if not manga_update:
                 manga_update = await self.check_fallback_api(session, name)
-            if manga update:
+            if manga_update:
                 await interaction.response.send_message(f"{name} latest episode is {manga_update['latest_episode']}.", ephemeral=True)
             else:
                 await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)

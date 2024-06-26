@@ -41,7 +41,17 @@ class MangaNotifier(commands.Cog):
             async with session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return {'latest_episode': data.get('latestChapter', 0)}
+                    if data and 'data' in data:
+                        # Add debugging to understand the response structure
+                        print(f"MangaDex response data: {data}")
+                        manga_data = data['data']
+                        if manga_data:
+                            latest_chapter = manga_data[0]['attributes'].get(
+                                'latestChapter', 0)
+                            return {'latest_episode': int(latest_chapter) if latest_chapter else 0}
+                    else:
+                        print(
+                            f"MangaDex response data not found or malformed: {data}")
                 else:
                     print(
                         f"Failed to fetch from MangaDex: HTTP {response.status}")
@@ -66,8 +76,14 @@ class MangaNotifier(commands.Cog):
             async with session.post(url, json={'query': query, 'variables': variables}) as response:
                 if response.status == 200:
                     data = await response.json()
-                    chapters = data['data']['Media'].get('chapters', 0)
-                    return {'latest_episode': chapters}
+                    if data and 'data' in data and 'Media' in data['data']:
+                        # Add debugging to understand the response structure
+                        print(f"AniList response data: {data}")
+                        chapters = data['data']['Media'].get('chapters', 0)
+                        return {'latest_episode': chapters}
+                    else:
+                        print(
+                            f"AniList response data not found or malformed: {data}")
                 else:
                     print(
                         f"Failed to fetch from AniList: HTTP {response.status}")

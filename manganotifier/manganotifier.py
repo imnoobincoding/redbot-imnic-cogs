@@ -20,11 +20,20 @@ class MangaNotifier(commands.Cog):
         await self.register_commands()
 
     async def register_commands(self):
-        self.bot.tree.add_command(self.slash_manga_add_unique)
-        self.bot.tree.add_command(self.slash_manga_remove_unique)
-        self.bot.tree.add_command(self.slash_manga_list_unique)
-        self.bot.tree.add_command(self.slash_manga_setchannel_unique)
-        self.bot.tree.add_command(self.slash_manga_info_unique)
+        commands_to_add = [
+            self.slash_manga_add_unique,
+            self.slash_manga_remove_unique,
+            self.slash_manga_list_unique,
+            self.slash_manga_setchannel_unique,
+            self.slash_manga_info_unique
+        ]
+
+        for cmd in commands_to_add:
+            try:
+                self.bot.tree.add_command(cmd)
+            except Exception as e:
+                print(f"Failed to add command {cmd.name}: {e}")
+
         await self.bot.tree.sync()
 
     @tasks.loop(minutes=30)
@@ -159,6 +168,25 @@ class MangaNotifier(commands.Cog):
 
     @app_commands.command(name="manga_add_unique", description="Add a manga to the list and fetch its details")
     async def slash_manga_add_unique(self, interaction: discord.Interaction, name: str):
+        manga_list = await self.config.manga_list()
+        if any(m['name'] == name for m in manga_list):
+            await interaction.response.send_message(f"{name} is already in the list.", ephemeral=True)
+            return
+
+        async with aiohttp.ClientSession() as session:
+            manga_update = await self.check_mangadex(session, name)
+            if not manga_update:
+                manga_update = await self.check_fallback_api(session, name)
+            if manga_update:
+                manga_list.append(
+                    {'name': name, 'last_episode': manga_update['latest_episode']})
+                await self.config.manga_list.set(manga_list)
+                await interaction.response.send_message(f"Added {name} to the list with latest episode {manga_update['latest_episode']}.", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
+
+    @app_commands.command(name="manga_remove_unique", description="Remove a manga from the list")
+    async def slash_manga_remove_unique(self, interaction: discord.Interaction, name: str):
         manga_list = await self.config.manga_list()
         if any(m['name'] == name for m in manga_list):
             await interaction.response.send_message(f"{name} is already in the list.", ephemeral=True)

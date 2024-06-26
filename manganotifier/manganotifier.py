@@ -30,7 +30,7 @@ class MangaNotifier(commands.Cog):
                 if manga_update:
                     latest_episode = manga_update.get('latest_episode', 0)
                     if latest_episode > manga['last_episode']:
-                        await self.notify_new_episode(manga['name'], latest_episode, manga_update['url'], manga_update['cover_image'], manga_update['description'])
+                        await self.notify_new_episode(manga['name'], latest_episode, manga_update['url'], manga_update.get('cover_image'), manga_update.get('description'))
                         manga['last_episode'] = latest_episode
                         await self.config.manga_list.set(manga_list)
 
@@ -167,7 +167,7 @@ class MangaNotifier(commands.Cog):
                     description=f"Added {name} to the list with the latest episode {manga_update['latest_episode']}.",
                     color=discord.Color.green()
                 )
-                if manga_update['cover_image']:
+                if manga_update.get('cover_image'):
                     embed.set_image(url=manga_update['cover_image'])
                 await ctx.send(embed=embed)
             else:
@@ -226,7 +226,7 @@ class MangaNotifier(commands.Cog):
                     description=f"Latest episode: {manga_update['latest_episode']}",
                     color=discord.Color.green()
                 )
-                if manga_update['cover_image']:
+                if manga_update.get('cover_image'):
                     embed.set_image(url=manga_update['cover_image'])
                 await ctx.send(embed=embed)
             else:

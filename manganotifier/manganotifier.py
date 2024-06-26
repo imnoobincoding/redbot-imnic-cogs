@@ -12,7 +12,7 @@ class MangaNotifier(commands.Cog):
         super().__init__()
         self.bot = bot
         self.config = Config.get_conf(
-            self, identifier=019053d5-544a-7460-a3f6-067576ebdae0, force_registration=True)
+            self, identifier=1234567890, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
 
@@ -97,12 +97,12 @@ class MangaNotifier(commands.Cog):
             print("Notification channel not set.")
 
     @commands.group()
-    async def manga(self, ctx):
+    async def manga_unique(self, ctx):
         """Manage your manga list"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @manga.command(name="manga_add_unique")
+    @manga_unique.command(name="manga_add_unique")
     async def add_unique(self, ctx, name: str):
         """Add a manga to the list and fetch its details"""
         manga_list = await self.config.manga_list()
@@ -122,7 +122,7 @@ class MangaNotifier(commands.Cog):
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
 
-    @manga.command(name="manga_remove_unique")
+    @manga_unique.command(name="manga_remove_unique")
     async def remove_unique(self, ctx, name: str):
         """Remove a manga from the list"""
         manga_list = await self.config.manga_list()
@@ -130,7 +130,7 @@ class MangaNotifier(commands.Cog):
         await self.config.manga_list.set(manga_list)
         await ctx.send(f"Removed {name} from the list.")
 
-    @manga.command(name="manga_list_unique")
+    @manga_unique.command(name="manga_list_unique")
     async def list_unique(self, ctx):
         """List all mangas"""
         manga_list = await self.config.manga_list()
@@ -139,13 +139,13 @@ class MangaNotifier(commands.Cog):
             return
         await ctx.send("\n".join(m['name'] for m in manga_list))
 
-    @manga.command(name="manga_setchannel_unique")
+    @manga_unique.command(name="manga_setchannel_unique")
     async def setchannel_unique(self, ctx, channel: discord.TextChannel):
         """Set the notification channel"""
         await self.config.channel_id.set(channel.id)
         await ctx.send(f"Notification channel set to {channel.mention}")
 
-    @manga.command(name="manga_info_unique")
+    @manga_unique.command(name="manga_info_unique")
     async def info_unique(self, ctx, name: str):
         """Get information about a manga"""
         async with aiohttp.ClientSession() as session:

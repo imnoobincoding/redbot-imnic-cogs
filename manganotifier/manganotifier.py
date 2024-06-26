@@ -42,13 +42,17 @@ class MangaNotifier(commands.Cog):
                 if response.status == 200:
                     data = await response.json()
                     if data and 'data' in data:
-                        # Add debugging to understand the response structure
-                        print(f"MangaDex response data: {data}")
                         manga_data = data['data']
                         if manga_data:
+                            # Log the entire response for debugging
+                            print(f"MangaDex response data: {manga_data}")
                             latest_chapter = manga_data[0]['attributes'].get(
-                                'latestChapter', 0)
-                            return {'latest_episode': int(latest_chapter) if latest_chapter else 0}
+                                'latestChapter', '')
+                            if latest_chapter.isdigit():
+                                return {'latest_episode': int(latest_chapter)}
+                            else:
+                                print(
+                                    f"No valid latestChapter found for {manga_name}")
                     else:
                         print(
                             f"MangaDex response data not found or malformed: {data}")
@@ -77,10 +81,15 @@ class MangaNotifier(commands.Cog):
                 if response.status == 200:
                     data = await response.json()
                     if data and 'data' in data and 'Media' in data['data']:
-                        # Add debugging to understand the response structure
-                        print(f"AniList response data: {data}")
-                        chapters = data['data']['Media'].get('chapters', 0)
-                        return {'latest_episode': chapters}
+                        media_data = data['data']['Media']
+                        # Log the entire response for debugging
+                        print(f"AniList response data: {media_data}")
+                        chapters = media_data.get('chapters', 0)
+                        if chapters:
+                            return {'latest_episode': chapters}
+                        else:
+                            print(
+                                f"No chapters found for {manga_name} in AniList response")
                     else:
                         print(
                             f"AniList response data not found or malformed: {data}")
@@ -111,10 +120,10 @@ class MangaNotifier(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @manga.command(name="add")
-    async def add(self, ctx, name: str):
+    async def add(self, ctx, *, name: str):
         """Add a manga to the list and fetch its details"""
         manga_list = await self.config.manga_list()
-        if any(m['name'] == name for m in manga_list):
+        if any(m['name'].lower() == name.lower() for m in manga_list):
             await ctx.send(f"{name} is already in the list.")
             return
 
@@ -131,10 +140,11 @@ class MangaNotifier(commands.Cog):
                 await ctx.send(f"Failed to fetch details for {name}.")
 
     @manga.command(name="remove")
-    async def remove(self, ctx, name: str):
+    async def remove(self, ctx, *, name: str):
         """Remove a manga from the list"""
         manga_list = await self.config.manga_list()
-        manga_list = [m for m in manga_list if m['name'] != name]
+        manga_list = [m for m in manga_list if m['name'].lower()
+                      != name.lower()]
         await self.config.manga_list.set(manga_list)
         await ctx.send(f"Removed {name} from the list.")
 
@@ -154,7 +164,7 @@ class MangaNotifier(commands.Cog):
         await ctx.send(f"Notification channel set to {channel.mention}")
 
     @manga.command(name="info")
-    async def info(self, ctx, name: str):
+    async def info(self, ctx, *, name: str):
         """Get information about a manga"""
         async with aiohttp.ClientSession() as session:
             manga_update = await self.check_mangadex(session, name)

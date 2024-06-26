@@ -9,7 +9,6 @@ class MangaNotifier(commands.Cog):
     """Manga Notifier to get updates on new episodes"""
 
     def __init__(self, bot: Red):
-        super().__init__()
         self.bot = bot
         self.config = Config.get_conf(
             self, identifier=7852384562, force_registration=True)
@@ -182,6 +181,7 @@ class MangaNotifier(commands.Cog):
                       != name.lower()]
         await self.config.manga_list.set(manga_list)
         embed = discord.Embed(
+
             title="Manga Removed",
             description=f"Removed {name} from the list.",
             color=discord.Color.red()

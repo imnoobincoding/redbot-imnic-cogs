@@ -46,9 +46,12 @@ class MangaNotifier(commands.Cog):
                         if manga_data:
                             # Log the entire response for debugging
                             print(f"MangaDex response data: {manga_data}")
-                            latest_chapter = manga_data[0]['attributes'].get(
-                                'latestChapter', '')
-                            if latest_chapter.isdigit():
+                            latest_chapter = None
+                            for manga in manga_data:
+                                if 'attributes' in manga and 'latestChapter' in manga['attributes']:
+                                    latest_chapter = manga['attributes']['latestChapter']
+                                    break
+                            if latest_chapter and latest_chapter.isdigit():
                                 return {'latest_episode': int(latest_chapter)}
                             else:
                                 print(
@@ -107,7 +110,13 @@ class MangaNotifier(commands.Cog):
         if channel_id:
             channel = self.bot.get_channel(channel_id)
             if channel:
-                await channel.send(f"New episode of {manga_name}: Episode {episode}")
+                embed = discord.Embed(
+                    title=f"New episode of {manga_name}",
+                    description=f"Episode {episode} is now available!",
+                    color=discord.Color.blue()
+                )
+                embed.set_footer(text="MangaNotifier")
+                await channel.send(embed=embed)
             else:
                 print(f"Channel ID {channel_id} not found.")
         else:
@@ -171,7 +180,12 @@ class MangaNotifier(commands.Cog):
             if not manga_update:
                 manga_update = await self.check_fallback_api(session, name)
             if manga_update:
-                await ctx.send(f"{name} latest episode is {manga_update['latest_episode']}.")
+                embed = discord.Embed(
+                    title=f"{name} Info",
+                    description=f"Latest episode: {manga_update['latest_episode']}",
+                    color=discord.Color.green()
+                )
+                await ctx.send(embed=embed)
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
 

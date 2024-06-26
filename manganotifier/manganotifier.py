@@ -18,13 +18,12 @@ class MangaNotifier(commands.Cog):
         self.bot.loop.create_task(self.register_commands())
 
     async def register_commands(self):
-        guild = discord.Object(id=YOUR_GUILD_ID)  # Replace with your guild ID
-        self.bot.tree.add_command(self.slash_manga_add, guild=guild)
-        self.bot.tree.add_command(self.slash_manga_remove, guild=guild)
-        self.bot.tree.add_command(self.slash_manga_list, guild=guild)
-        self.bot.tree.add_command(self.slash_manga_setchannel, guild=guild)
-        self.bot.tree.add_command(self.slash_manga_info, guild=guild)
-        await self.bot.tree.sync(guild=guild)
+        self.bot.tree.add_command(self.slash_manga_add)
+        self.bot.tree.add_command(self.slash_manga_remove)
+        self.bot.tree.add_command(self.slash_manga_list)
+        self.bot.tree.add_command(self.slash_manga_setchannel)
+        self.bot.tree.add_command(self.slash_manga_info)
+        await self.bot.tree.sync()
 
     @tasks.loop(minutes=30)
     async def manga_check_loop(self):

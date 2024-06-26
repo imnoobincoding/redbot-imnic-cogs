@@ -1,10 +1,8 @@
 import discord
-from discord.ext import tasks
-from redbot.core import commands, Config
+from discord.ext import tasks, commands
+from redbot.core import Config, app_commands
 from redbot.core.bot import Red
-from discord_slash import cog_ext, SlashContext
 import aiohttp
-import asyncio
 
 
 class MangaNotifier(commands.Cog):
@@ -16,6 +14,7 @@ class MangaNotifier(commands.Cog):
             self, identifier=1234567890, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
+        self.add_commands()
 
     @tasks.loop(minutes=30)
     async def manga_check_loop(self):
@@ -147,56 +146,62 @@ class MangaNotifier(commands.Cog):
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
 
-    # Slash commands
-    @cog_ext.cog_slash(name="manga_add", description="Add a manga to the list and fetch its details")
-    async def slash_manga_add(self, ctx: SlashContext, name: str):
-        manga_list = await self.config.manga_list()
-        if any(m['name'] == name for m in manga_list):
-            await ctx.send(content=f"{name} is already in the list.")
-            return
+    def add_commands(self):
+        @app_commands.command(name="manga_add", description="Add a manga to the list and fetch its details")
+        async def slash_manga_add(interaction: discord.Interaction, name: str):
+            manga_list = await self.config.manga_list()
+            if any(m['name'] == name for m in manga_list):
+                await interaction.response.send_message(f"{name} is already in the list.", ephemeral=True)
+                return
 
-        async with aiohttp.ClientSession() as session:
-            manga_update = await self.check_mangadex(session, name)
-            if not manga_update:
-                manga_update = await self.check_fallback_api(session, name)
-            if manga_update:
-                manga_list.append(
-                    {'name': name, 'last_episode': manga_update['latest_episode']})
-                await self.config.manga_list.set(manga_list)
-                await ctx.send(content=f"Added {name} to the list with latest episode {manga_update['latest_episode']}.")
-            else:
-                await ctx.send(content=f"Failed to fetch details for {name}.")
+            async with aiohttp.ClientSession() as session:
+                manga_update = await self.check_mangadex(session, name)
+                if not manga_update:
+                    manga_update = await self.check_fallback_api(session, name)
+                if manga_update:
+                    manga_list.append(
+                        {'name': name, 'last_episode': manga_update['latest_episode']})
+                    await self.config.manga_list.set(manga_list)
+                    await interaction.response.send_message(f"Added {name} to the list with latest episode {manga_update['latest_episode']}.", ephemeral=True)
+                else:
+                    await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
 
-    @cog_ext.cog_slash(name="manga_remove", description="Remove a manga from the list")
-    async def slash_manga_remove(self, ctx: SlashContext, name: str):
-        manga_list = await self.config.manga_list()
-        manga_list = [m for m in manga_list if m['name'] != name]
-        await self.config.manga_list.set(manga_list)
-        await ctx.send(content=f"Removed {name} from the list.")
+        @app_commands.command(name="manga_remove", description="Remove a manga from the list")
+        async def slash_manga_remove(interaction: discord.Interaction, name: str):
+            manga_list = await self.config.manga_list()
+            manga_list = [m for m in manga_list if m['name'] != name]
+            await self.config.manga_list.set(manga_list)
+            await interaction.response.send_message(f"Removed {name} from the list.", ephemeral=True)
 
-    @cog_ext.cog_slash(name="manga_list", description="List all mangas")
-    async def slash_manga_list(self, ctx: SlashContext):
-        manga_list = await self.config.manga_list()
-        if not manga_list:
-            await ctx.send(content="The manga list is empty.")
-            return
-        await ctx.send(content="\n".join(m['name'] for m in manga_list))
+        @app_commands.command(name="manga_list", description="List all mangas")
+        async def slash_manga_list(interaction: discord.Interaction):
+            manga_list = await self.config.manga_list()
+            if not manga_list:
+                await interaction.response.send_message("The manga list is empty.", ephemeral=True)
+                return
+            await interaction.response.send_message("\n".join(m['name'] for m in manga_list), ephemeral=True)
 
-    @cog_ext.cog_slash(name="manga_setchannel", description="Set the notification channel")
-    async def slash_manga_setchannel(self, ctx: SlashContext, channel: discord.TextChannel):
-        await self.config.channel_id.set(channel.id)
-        await ctx.send(content=f"Notification channel set to {channel.mention}")
+        @app_commands.command(name="manga_setchannel", description="Set the notification channel")
+        async def slash_manga_setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
+            await self.config.channel_id.set(channel.id)
+            await interaction.response.send_message(f"Notification channel set to {channel.mention}", ephemeral=True)
 
-    @cog_ext.cog_slash(name="manga_info", description="Get information about a manga")
-    async def slash_manga_info(self, ctx: SlashContext, name: str):
-        async with aiohttp.ClientSession() as session:
-            manga_update = await self.check_mangadex(session, name)
-            if not manga_update:
-                manga_update = await self.check_fallback_api(session, name)
-            if manga_update:
-                await ctx.send(content=f"{name} latest episode is {manga_update['latest_episode']}.")
-            else:
-                await ctx.send(content=f"Failed to fetch details for {name}.")
+        @app_commands.command(name="manga_info", description="Get information about a manga")
+        async def slash_manga_info(interaction: discord.Interaction, name: str):
+            async with aiohttp.ClientSession() as session:
+                manga_update = await self.check_mangadex(session, name)
+                if not manga_update:
+                    manga_update = await self.check_fallback_api(session, name)
+                if manga_update:
+                    await interaction.response.send_message(f"{name} latest episode is {manga_update['latest_episode']}.", ephemeral=True)
+                else:
+                    await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
+
+        self.bot.tree.add_command(slash_manga_add)
+        self.bot.tree.add_command(slash_manga_remove)
+        self.bot.tree.add_command(slash_manga_list)
+        self.bot.tree.add_command(slash_manga_setchannel)
+        self.bot.tree.add_command(slash_manga_info)
 
 
 def setup(bot: Red):

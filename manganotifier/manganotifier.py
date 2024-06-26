@@ -56,7 +56,7 @@ class MangaNotifier(commands.Cog):
                                         (rel for rel in manga['relationships'] if rel['type'] == 'cover_art'), None)
                                     if cover_art_relationship:
                                         cover_image_id = cover_art_relationship['id']
-                                        cover_image = f"https://uploads.mangadex.org/covers/{cover_image_id}.jpg"
+                                        cover_image = f"https://og.mangadex.org/og-image/manga/{cover_image_id}"
                                     description = manga['attributes'].get(
                                         'description', {}).get('en', 'No description available.')
                                     url = f"https://mangadex.org/title/{manga['id']}"

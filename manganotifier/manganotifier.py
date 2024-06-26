@@ -1,6 +1,6 @@
 import discord
 from discord.ext import tasks, commands
-from redbot.core import Config, app_commands
+from redbot.core import Config, commands
 from redbot.core.bot import Red
 import aiohttp
 
@@ -14,7 +14,6 @@ class MangaNotifier(commands.Cog):
             self, identifier=1234567890, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
-        self.add_commands()
 
     @tasks.loop(minutes=30)
     async def manga_check_loop(self):

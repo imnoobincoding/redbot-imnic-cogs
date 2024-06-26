@@ -197,7 +197,7 @@ class MangaNotifier(commands.Cog):
         await interaction.response.send_message(f"Notification channel set to {channel.mention}", ephemeral=True)
 
     @app_commands.command(name="manga_info_unique", description="Get information about a manga")
-    async def slash_manga_info(self, interaction: discord.Interaction, name: str):
+    async def slash_manga_info_unique(self, interaction: discord.Interaction, name: str):
         async with aiohttp.ClientSession() as session:
             manga_update = await self.check_mangadex(session, name)
             if not manga_update:

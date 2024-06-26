@@ -29,10 +29,7 @@ class MangaNotifier(commands.Cog):
         ]
 
         for cmd in commands_to_add:
-            try:
-                self.bot.tree.add_command(cmd)
-            except Exception as e:
-                print(f"Failed to add command {cmd.name}: {e}")
+            self.bot.tree.add_command(cmd)
 
         await self.bot.tree.sync()
 
@@ -206,26 +203,4 @@ class MangaNotifier(commands.Cog):
         await interaction.response.send_message(f"Notification channel set to {channel.mention}", ephemeral=True)
 
     @app_commands.command(name="manga_info_unique", description="Get information about a manga")
-    async def slash_manga_info_unique(self, interaction: discord.Interaction, name: str):
-        async with aiohttp.ClientSession() as session:
-            manga_update = await self.check_mangadex(session, name)
-            if not manga_update:
-                manga_update = await self.check_fallback_api(session, name)
-            if manga_update:
-                await interaction.response.send_message(f"{name} latest episode is {manga_update['latest_episode']}.", ephemeral=True)
-            else:
-                await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
-
-    async def cog_unload(self):
-        self.manga_check_loop.cancel()
-        self.bot.tree.remove_command("manga_add_unique")
-        self.bot.tree.remove_command("manga_remove_unique")
-        self.bot.tree.remove_command("manga_list_unique")
-        self.bot.tree.remove_command("manga_setchannel_unique")
-        self.bot.tree.remove_command("manga_info_unique")
-
-
-async def setup(bot: Red):
-    cog = MangaNotifier(bot)
-    await bot.add_cog(cog)
-    await cog.initialize()
+    async def slash_manga_info_unique(self

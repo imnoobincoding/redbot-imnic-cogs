@@ -26,7 +26,7 @@ class MangaNotifier(commands.Cog):
                     manga_update = await self.check_fallback_api(session, manga['name'])
 
                 if manga_update:
-                    latest_episode = manga_update['latest_episode']
+                    latest_episode = manga_update.get('latest_episode', 0)
                     if latest_episode > manga['last_episode']:
                         await self.notify_new_episode(manga['name'], latest_episode)
                         manga['last_episode'] = latest_episode
@@ -38,7 +38,7 @@ class MangaNotifier(commands.Cog):
             async with session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return {'latest_episode': data['latestChapter']}
+                    return {'latest_episode': data.get('latestChapter', 0)}
                 else:
                     print(
                         f"Failed to fetch from MangaDex: HTTP {response.status}")
@@ -63,7 +63,7 @@ class MangaNotifier(commands.Cog):
             async with session.post(url, json={'query': query, 'variables': variables}) as response:
                 if response.status == 200:
                     data = await response.json()
-                    chapters = data['data']['Media']['chapters']
+                    chapters = data['data']['Media'].get('chapters', 0)
                     return {'latest_episode': chapters}
                 else:
                     print(

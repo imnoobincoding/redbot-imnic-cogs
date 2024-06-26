@@ -12,7 +12,7 @@ class MangaNotifier(commands.Cog):
         super().__init__()
         self.bot = bot
         self.config = Config.get_conf(
-            self, identifier=1234567890, force_registration=True)
+            self, identifier=019053d5-544a-7460-a3f6-067576ebdae0, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
 

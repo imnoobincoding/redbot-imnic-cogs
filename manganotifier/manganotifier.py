@@ -11,16 +11,12 @@ class MangaNotifier(commands.Cog):
     def __init__(self, bot: Red):
         super().__init__()
         self.bot = bot
-        self.config = Config.get_conf(
-            self, identifier=1234567890, force_registration=True)
+        self.config = Config.get_conf(self, identifier=0190546a-69df-7ec2-b96a-dae74ae47296, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
 
     async def initialize(self):
-        await self.register_commands()
-
-    async def register_commands(self):
-        await self.bot.tree.sync()
+        pass
 
     @tasks.loop(minutes=30)
     async def manga_check_loop(self):
@@ -154,11 +150,6 @@ class MangaNotifier(commands.Cog):
 
     async def cog_unload(self):
         self.manga_check_loop.cancel()
-        self.bot.tree.remove_command("manga_add")
-        self.bot.tree.remove_command("manga_remove")
-        self.bot.tree.remove_command("manga_list")
-        self.bot.tree.remove_command("manga_setchannel")
-        self.bot.tree.remove_command("manga_info")
 
 
 async def setup(bot: Red):

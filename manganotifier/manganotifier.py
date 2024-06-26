@@ -204,7 +204,7 @@ class MangaNotifier(commands.Cog):
             else:
                 await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
 
-    @app_commands.command(name="manga_remove_unique", description="Remove a manga from the list")
+        @app_commands.command(name="manga_remove_unique", description="Remove a manga from the list")
     async def slash_manga_remove_unique(self, interaction: discord.Interaction, name: str):
         manga_list = await self.config.manga_list()
         manga_list = [m for m in manga_list if m['name'] != name]
@@ -236,12 +236,15 @@ class MangaNotifier(commands.Cog):
                 await interaction.response.send_message(f"Failed to fetch details for {name}.", ephemeral=True)
 
     async def cog_unload(self):
-        self.bot.tree.remove_command("manga_add")
-        self.bot.tree.remove_command("manga_remove")
-        self.bot.tree.remove_command("manga_list")
-        self.bot.tree.remove_command("manga_setchannel")
-        self.bot.tree.remove_command("manga_info")
+        self.manga_check_loop.cancel()
+        self.bot.tree.remove_command("manga_add_unique")
+        self.bot.tree.remove_command("manga_remove_unique")
+        self.bot.tree.remove_command("manga_list_unique")
+        self.bot.tree.remove_command("manga_setchannel_unique")
+        self.bot.tree.remove_command("manga_info_unique")
 
 
-def setup(bot: Red):
-    bot.add_cog(MangaNotifier(bot))
+async def setup(bot: Red):
+    cog = MangaNotifier(bot)
+    await bot.add_cog(cog)
+    await cog.initialize()

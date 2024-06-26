@@ -46,11 +46,17 @@ class MangaNotifier(commands.Cog):
                         if manga_data:
                             print(f"MangaDex response data: {manga_data}")
                             latest_chapter = None
+                            cover_image = None
+                            description = None
                             for manga in manga_data:
                                 if 'attributes' in manga:
                                     latest_chapter = manga['attributes'].get(
                                         'latestChapter', '')
-                                    cover_image = f"https://og.mangadex.org/og-image/manga/{manga['id']}"
+                                    cover_art_relationship = next(
+                                        (rel for rel in manga['relationships'] if rel['type'] == 'cover_art'), None)
+                                    if cover_art_relationship:
+                                        cover_image_id = cover_art_relationship['id']
+                                        cover_image = f"https://uploads.mangadex.org/covers/{cover_image_id}.jpg"
                                     description = manga['attributes'].get(
                                         'description', {}).get('en', 'No description available.')
                                     url = f"https://mangadex.org/title/{manga['id']}"
@@ -124,7 +130,8 @@ class MangaNotifier(commands.Cog):
                     url=url,
                     color=discord.Color.blue()
                 )
-                embed.set_image(url=cover_image)
+                if cover_image:
+                    embed.set_image(url=cover_image)
                 embed.add_field(name="Latest Episode",
                                 value=f"Episode {episode}", inline=True)
                 embed.set_footer(text="MangaNotifier")
@@ -161,6 +168,8 @@ class MangaNotifier(commands.Cog):
                     description=f"Added {name} to the list with the latest episode {manga_update['latest_episode']}.",
                     color=discord.Color.green()
                 )
+                if manga_update['cover_image']:
+                    embed.set_image(url=manga_update['cover_image'])
                 await ctx.send(embed=embed)
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")
@@ -217,6 +226,8 @@ class MangaNotifier(commands.Cog):
                     description=f"Latest episode: {manga_update['latest_episode']}",
                     color=discord.Color.green()
                 )
+                if manga_update['cover_image']:
+                    embed.set_image(url=manga_update['cover_image'])
                 await ctx.send(embed=embed)
             else:
                 await ctx.send(f"Failed to fetch details for {name}.")

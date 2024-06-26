@@ -31,7 +31,7 @@ class MangaNotifier(commands.Cog):
                 if manga_update:
                     latest_episode = manga_update.get('latest_episode', 0)
                     if latest_episode > manga['last_episode']:
-                        await self.notify_new_episode(manga['name'], latest_episode)
+                        await self.notify_new_episode(manga['name'], latest_episode, manga_update['url'], manga_update['cover_image'], manga_update['description'])
                         manga['last_episode'] = latest_episode
                         await self.config.manga_list.set(manga_list)
 
@@ -44,15 +44,24 @@ class MangaNotifier(commands.Cog):
                     if data and 'data' in data:
                         manga_data = data['data']
                         if manga_data:
-                            # Log the entire response for debugging
                             print(f"MangaDex response data: {manga_data}")
                             latest_chapter = None
                             for manga in manga_data:
-                                if 'attributes' in manga and 'latestChapter' in manga['attributes']:
-                                    latest_chapter = manga['attributes']['latestChapter']
+                                if 'attributes' in manga:
+                                    latest_chapter = manga['attributes'].get(
+                                        'latestChapter', '')
+                                    cover_image = f"https://og.mangadex.org/og-image/manga/{manga['id']}"
+                                    description = manga['attributes'].get(
+                                        'description', {}).get('en', 'No description available.')
+                                    url = f"https://mangadex.org/title/{manga['id']}"
                                     break
                             if latest_chapter and latest_chapter.isdigit():
-                                return {'latest_episode': int(latest_chapter)}
+                                return {
+                                    'latest_episode': int(latest_chapter),
+                                    'cover_image': cover_image,
+                                    'description': description,
+                                    'url': url
+                                }
                             else:
                                 print(
                                     f"No valid latestChapter found for {manga_name}")
@@ -85,7 +94,6 @@ class MangaNotifier(commands.Cog):
                     data = await response.json()
                     if data and 'data' in data and 'Media' in data['data']:
                         media_data = data['data']['Media']
-                        # Log the entire response for debugging
                         print(f"AniList response data: {media_data}")
                         chapters = media_data.get('chapters', 0)
                         if chapters:
@@ -105,16 +113,20 @@ class MangaNotifier(commands.Cog):
             print(f"Unexpected error: {e}")
         return None
 
-    async def notify_new_episode(self, manga_name, episode):
+    async def notify_new_episode(self, manga_name, episode, url, cover_image, description):
         channel_id = await self.config.channel_id()
         if channel_id:
             channel = self.bot.get_channel(channel_id)
             if channel:
                 embed = discord.Embed(
                     title=f"New episode of {manga_name}",
-                    description=f"Episode {episode} is now available!",
+                    description=description,
+                    url=url,
                     color=discord.Color.blue()
                 )
+                embed.set_image(url=cover_image)
+                embed.add_field(name="Latest Episode",
+                                value=f"Episode {episode}", inline=True)
                 embed.set_footer(text="MangaNotifier")
                 await channel.send(embed=embed)
             else:

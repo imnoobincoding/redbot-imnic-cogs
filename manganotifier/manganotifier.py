@@ -15,7 +15,9 @@ class MangaNotifier(commands.Cog):
             self, identifier=1234567890, force_registration=True)
         self.config.register_global(manga_list=[], channel_id=None)
         self.manga_check_loop.start()
-        self.bot.loop.create_task(self.register_commands())
+
+    async def initialize(self):
+        await self.register_commands()
 
     async def register_commands(self):
         self.bot.tree.add_command(self.slash_manga_add)

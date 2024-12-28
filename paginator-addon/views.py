@@ -8,7 +8,6 @@ from .utils import Page
 
 
 class ViewDisableOnTimeout(View):
-    # I was too lazy to copypaste id rather have a mother class that implements this
     def __init__(self, **kwargs):
         self.message: discord.Message = None
         self.ctx: commands.Context = kwargs.pop("ctx", None)
@@ -21,7 +20,6 @@ class ViewDisableOnTimeout(View):
             await self.message.edit(view=self)
             if self.timeout_message and self.ctx:
                 await self.ctx.send(self.timeout_message)
-
         self.stop()
 
 
@@ -33,10 +31,9 @@ def disable_items(self: View):
 async def interaction_check(ctx: commands.Context, interaction: discord.Interaction):
     if not ctx.author.id == interaction.user.id:
         await interaction.response.send_message(
-            "You aren't allowed to interact with this bruh. Back Off!", ephemeral=True
+            "You aren't allowed to interact with this. Back off!", ephemeral=True
         )
         return False
-
     return True
 
 
@@ -47,9 +44,6 @@ class CloseButton(Button):
     async def callback(self, interaction: discord.Interaction):
         await self.view.message.delete()
         self.view.stop()
-
-
-# <-------------------Paginaion Stuff Below------------------->
 
 
 class PaginatorButton(Button):
@@ -66,7 +60,6 @@ class ForwardButton(PaginatorButton):
             self.view.index = 0
         else:
             self.view.index += 1
-
         await self.view.edit_message(interaction)
 
 
@@ -79,7 +72,6 @@ class BackwardButton(PaginatorButton):
             self.view.index = len(self.view.contents) - 1
         else:
             self.view.index -= 1
-
         await self.view.edit_message(interaction)
 
 
@@ -91,7 +83,6 @@ class LastItemButton(PaginatorButton):
 
     async def callback(self, interaction: discord.Interaction):
         self.view.index = len(self.view.contents) - 1
-
         await self.view.edit_message(interaction)
 
 
@@ -103,7 +94,6 @@ class FirstItemButton(PaginatorButton):
 
     async def callback(self, interaction: discord.Interaction):
         self.view.index = 0
-
         await self.view.edit_message(interaction)
 
 
@@ -116,16 +106,15 @@ class PageButton(Button):
 
 
 class PaginatorSelect(Select):
-    def __init__(self, *, placeholder: str = "Select an item:", length: int):
+    def __init__(self, *, placeholder: str = "Select a page:", length: int):
         options = [
-            discord.SelectOption(label=f"{i+1}", value=i, description=f"Go to page {i+1}")
+            discord.SelectOption(label=f"{i+1}", value=str(i), description=f"Go to page {i+1}")
             for i in range(length)
         ]
         super().__init__(options=options, placeholder=placeholder)
 
     async def callback(self, interaction: discord.Interaction):
         self.view.index = int(self.values[0])
-
         await self.view.edit_message(interaction)
 
 
@@ -139,43 +128,39 @@ class PaginationView(ViewDisableOnTimeout):
         delete_on_timeout: bool = False,
     ):
         super().__init__(timeout=timeout, ctx=context, timeout_message=None)
-
         self.ctx = context
         self.contents = contents
         self.use_select = use_select
         self.delete_on_timeout = delete_on_timeout
         self.index = 0
+
         if self.use_select and len(self.contents) > 1:
             self.add_item(PaginatorSelect(placeholder="Select a page:", length=len(contents)))
 
-        buttons_to_add = (
-            [FirstItemButton, BackwardButton, PageButton, ForwardButton, LastItemButton]
-            if len(self.contents) > 2
-            else [BackwardButton, PageButton, ForwardButton]
-            if not len(self.contents) == 1
-            else []
-        )
-        for i in buttons_to_add:
-            self.add_item(i())
+        buttons_to_add = []
+        if len(self.contents) == 1:
+            # Single page -> just a Close button
+            pass
+        elif len(self.contents) == 2:
+            # Minimal nav needed
+            buttons_to_add = [BackwardButton, PageButton, ForwardButton]
+        else:
+            # Full suite
+            buttons_to_add = [FirstItemButton, BackwardButton, PageButton, ForwardButton, LastItemButton]
 
+        for btn_cls in buttons_to_add:
+            self.add_item(btn_cls())
         self.add_item(CloseButton())
         self.update_items()
 
     def update_items(self):
-        for i in self.children:
-            if isinstance(i, PageButton):
-                i._change_label()
-                continue
-
-            elif self.index == 0 and isinstance(i, FirstItemButton):
-                i.disabled = True
-                continue
-
-            elif self.index == len(self.contents) - 1 and isinstance(i, LastItemButton):
-                i.disabled = True
-                continue
-
-            i.disabled = False
+        for item in self.children:
+            if isinstance(item, PageButton):
+                item._change_label()
+            elif isinstance(item, FirstItemButton):
+                item.disabled = self.index == 0
+            elif isinstance(item, LastItemButton):
+                item.disabled = self.index == len(self.contents) - 1
 
     async def start(self, index=None):
         if index is not None:
@@ -190,9 +175,8 @@ class PaginationView(ViewDisableOnTimeout):
         return self.contents[self.index]
 
     async def edit_message(self, inter: discord.Interaction):
-        page = self.current_page()
-
         self.update_items()
+        page = self.current_page()
         await inter.response.edit_message(**page, view=self)
 
     async def on_timeout(self):

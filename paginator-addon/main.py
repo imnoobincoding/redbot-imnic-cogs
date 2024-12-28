@@ -3,12 +3,17 @@ from typing import Optional
 
 import aiohttp
 import discord
+import os
 from redbot.core import Config, commands
 from redbot.core.bot import Red
 from redbot.core.utils import chat_formatting as cf
 
 from .utils import *
 from .views import PaginationView
+
+# Environment variables for PrivateBin
+PRIVATEBIN_URL = os.getenv("PRIVATEBIN_URL", "https://your-privatebin-instance")
+PRIVATEBIN_ENDPOINT = os.getenv("PRIVATEBIN_ENDPOINT", "api/v1/paste")
 
 
 def jsonize_page(page: Page):
@@ -32,7 +37,8 @@ class Paginator(commands.Cog):
         https://pastebin.com/DiuFREBW
         
     YAML example:
-        https://pastebin.com/e9ZvhYUn"""
+        https://pastebin.com/e9ZvhYUn
+    """
 
     def __init__(self, bot: Red):
         self.bot = bot
@@ -41,9 +47,6 @@ class Paginator(commands.Cog):
         self.config.register_guild(**{"page_groups": {}})
 
         self.session = aiohttp.ClientSession()
-        # page_groups would be a dict group_name as key and a dict as value.
-        # this dict would have 2 keys: "pages", "timeout", "reactions" and "delete_on_timeout".
-        # where each page is a dict with "content" and "embed"/"embeds" as keys.
 
     async def cog_unload(self):
         await self.session.close()
@@ -55,7 +58,11 @@ class Paginator(commands.Cog):
         timeout: int = 60,
         delete_on_timeout: bool = False,
     ):
-        ...
+        """
+        (Optional) Reaction-based pagination method, if you want to keep the old style.
+        Could be implemented similarly to the button-based approach in `views.py`.
+        """
+        pass
 
     @commands.group(name="paginator", invoke_without_command=True, aliases=["paginate", "page"])
     @commands.mod()
@@ -66,7 +73,8 @@ class Paginator(commands.Cog):
             https://pastebin.com/DiuFREBW
         
         YAML example:
-            https://pastebin.com/e9ZvhYUn"""
+            https://pastebin.com/e9ZvhYUn
+        """
         return await ctx.send_help()
 
     @pg.command(name="start")
@@ -100,15 +108,12 @@ class Paginator(commands.Cog):
                 )
             pages = [pythonize_page(page) for page in pages]
             timeout = timeout or group["timeout"]
-            # reactions = group["reactions"]
             delete_on_timeout = group["delete_on_timeout"]
 
-            # if not reactions:
+            # If we want to handle 'reactions' approach, we check group["reactions"].
+            # But let's default to the button-based approach from PaginationView.
             paginator = PaginationView(ctx, pages, timeout, True, delete_on_timeout)
             await paginator.start(index=page_number - 1)
-
-            # else:
-            #     await self.reaction_paginate(ctx, pages, timeout, delete_on_timeout)
 
     @pg.command(name="create")
     async def pg_create(
@@ -168,14 +173,7 @@ class Paginator(commands.Cog):
         ),
         index: int = None,
     ):
-        """Add a page to a paginator group.
-
-        The `page` argument should be a pastebin link containing valid json.
-        If `index` is not provided, the page will be added to the end of the paginator group.
-        Otherwise, the page will be added at the specified index and the page on that index and all the pages after it will be shifted one index ahead.
-
-        Example JSON: https://pastebin.com/DiuFREBW
-        """
+        """Add a page to a paginator group from Pastebin JSON."""
         if index and index < 1:
             return await ctx.send(cf.error("Index cannot be less than 1."))
 
@@ -191,7 +189,6 @@ class Paginator(commands.Cog):
 
             if index is None:
                 page_groups[group_name]["pages"].append(page)
-
             else:
                 try:
                     page_groups[group_name]["pages"][index - 1]
@@ -213,14 +210,7 @@ class Paginator(commands.Cog):
         page: Page = commands.parameter(converter=PastebinConverter(conversion_type="yaml")),
         index: int = None,
     ):
-        """Add a page to a paginator group.
-
-        The `page` argument should be a pastebin link containing valid yaml.
-        If `index` is not provided, the page will be added to the end of the paginator group.
-        Otherwise, the page will be added at the specified index and the page on that index and all the pages after it will be shifted one index ahead.
-        
-        
-        Example YAML: https://pastebin.com/e9ZvhYUn"""
+        """Add a page to a paginator group from Pastebin YAML."""
         if index and index < 1:
             return await ctx.send(cf.error("Index cannot be less than 1."))
 
@@ -236,7 +226,6 @@ class Paginator(commands.Cog):
 
             if index is None:
                 page_groups[group_name]["pages"].append(page)
-
             else:
                 try:
                     page_groups[group_name]["pages"][index - 1]
@@ -249,6 +238,53 @@ class Paginator(commands.Cog):
                 page_groups[group_name]["pages"].insert(index - 1, page)
 
             await ctx.send(cf.info(f"Added a page to the paginator group named `{group_name}`."))
+
+    # ------- NEW COMMAND FOR PRIVATEBIN JSON/YAML -------
+    @pg_addpage.command(name="fromprivatebin", aliases=["fpb", "pb"])
+    async def pg_addpage_privatebin(
+        self,
+        ctx: commands.Context,
+        group_name: str,
+        page: Page = commands.parameter(converter=PrivatebinConverter),
+        index: int = None,
+    ):
+        """
+        Add a page to a paginator group from PrivateBin JSON or YAML.
+        
+        Usage:
+            [p]page addpage fromprivatebin <group_name> <privatebin_link> [index]
+        
+        If index is not provided, the page will be added to the end of the paginator group.
+        Otherwise, it will insert at the specified index, shifting subsequent pages by one.
+        """
+        if index and index < 1:
+            return await ctx.send(cf.error("Index cannot be less than 1."))
+
+        async with self.config.guild(ctx.guild).page_groups() as page_groups:
+            if group_name not in page_groups:
+                return await ctx.send(
+                    cf.error(
+                        f"A paginator group named `{group_name}` does not exist. Please use a proper group name."
+                    )
+                )
+
+            # Convert Page to JSON-storable dict
+            page_dict = jsonize_page(page)
+
+            if index is None:
+                page_groups[group_name]["pages"].append(page_dict)
+            else:
+                try:
+                    page_groups[group_name]["pages"][index - 1]
+                except IndexError:
+                    return await ctx.send(
+                        cf.error(
+                            f"Invalid index. This paginator group has only {len(page_groups[group_name]['pages'])} pages."
+                        )
+                    )
+                page_groups[group_name]["pages"].insert(index - 1, page_dict)
+
+            await ctx.send(cf.info(f"Added a PrivateBin-based page to `{group_name}`."))
 
     @pg.command(name="removepage", aliases=["rp"])
     async def pg_removepage(self, ctx: commands.Context, group_name: str, page_number: int):
@@ -280,7 +316,7 @@ class Paginator(commands.Cog):
         page_number: int,
         page: Page = commands.parameter(converter=PastebinConverter),
     ):
-        """Edit a page in a paginator group."""
+        """Edit a page in a paginator group (uses Pastebin converter by default)."""
         async with self.config.guild(ctx.guild).page_groups() as page_groups:
             if group_name not in page_groups:
                 return await ctx.send(
@@ -313,8 +349,6 @@ class Paginator(commands.Cog):
 
             group: PageGroup = page_groups[group_name]
 
-            # group details include: timeout seconds, pages, reactions, delete after timeout.
-
             page_count = len(group["pages"])
             page_count_with_content = len(
                 pcc := list(filter(lambda x: x is not None, group["pages"]))
@@ -332,8 +366,9 @@ class Paginator(commands.Cog):
                     f"**Delete after timeout:** {group['delete_on_timeout']}\n"
                     f"**Use Reactions:** {group['reactions']}\n"
                     f"**Use Buttons:** {not group['reactions']}\n"
-                    f"**Pages:** {page_count} pages, {page_count_with_content} pages with content (Indices {cf.humanize_list(page_index_with_content)}) "
-                    f"{page_count_with_embeds} pages with embeds (Indices {cf.humanize_list(page_index_with_embeds)})\n"
+                    f"**Pages:** {page_count} total\n"
+                    f"         {page_count_with_content} pages with content (Indices {cf.humanize_list(page_index_with_content)})\n"
+                    f"         {page_count_with_embeds} pages with embeds (Indices {cf.humanize_list(page_index_with_embeds)})"
                 ),
                 color=await ctx.embed_color(),
             )
@@ -374,8 +409,7 @@ class Paginator(commands.Cog):
 
             try:
                 page = group["pages"][index - 1]
-
-            except:
+            except IndexError:
                 return await ctx.send(cf.error(f"Page number `{index}` does not exist."))
 
             await ctx.send(file=cf.text_to_file(json.dumps(page, indent=4), f"{group_name}.json"))
